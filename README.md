@@ -17,7 +17,7 @@ The project has a **React front end** and a **FastAPI back end** with a SQLite d
 - **Voice input** with the microphone (English or Arabic), in browsers that support it
 - **Quick suggestions** and **"Solved? Yes / No"** feedback after each answer
 - **Back end with a database**: accounts with hashed passwords, login tokens, saved chat history and tickets
-- **Operator dashboard**: open and resolved tickets; the operator's answer goes back to the customer's chat
+- **Operator dashboard**: open and resolved tickets, a live conversation with the customer, and Resolve
 - **404 page** for links that do not exist
 - **Menu button** on small screens
 - **Responsive design** for phones, tablets and computers
@@ -117,11 +117,13 @@ vite.config.js          Vite settings (base path for GitHub Pages, /api proxy)
 | POST | /api/auth/signup | No | Creates an account (password stored hashed) |
 | POST | /api/auth/login | No | Checks email and password, returns a token |
 | GET | /api/auth/me | Yes | Returns the logged-in user |
-| POST | /api/chat | Yes | Saves the message, returns the answer; no answer → opens a ticket |
+| POST | /api/chat | Yes | Saves the message, returns the answer; no answer → opens a ticket. If the user has an open ticket, the message goes to the operator instead |
 | POST | /api/feedback | Yes | "Solved? Yes / No"; No → opens a ticket |
-| GET | /api/chat/history | Yes | The user's previous messages (with operator replies) |
+| GET | /api/chat/history?after=ID | Yes | Messages newer than ID (the chat asks every 4 seconds), and whether a ticket is open |
 | GET | /api/tickets?status=open | Operator | Open or resolved tickets, with the customer and the message |
-| POST | /api/tickets/{id}/resolve | Operator | Saves the solution and sends it to the customer's chat |
+| GET | /api/tickets/{id}/messages | Operator | The whole conversation of a ticket |
+| POST | /api/tickets/{id}/reply | Operator | Sends a message to the customer's chat |
+| POST | /api/tickets/{id}/resolve | Operator | Closes the ticket; the last operator message is saved as the solution |
 
 "Login needed" means the request carries the header `Authorization: Bearer <token>`.
 
@@ -130,8 +132,8 @@ vite.config.js          Vite settings (base path for GitHub Pages, /api proxy)
 | Table | Holds |
 |---|---|
 | users | name, email, password hash, role (customer / operator / admin) |
-| messages | every user and bot message, its language, whether it was escalated or solved |
-| tickets | problems sent to an operator (open / resolved) |
+| messages | every user, bot and operator message, its language, and its ticket (if any) |
+| tickets | problems sent to an operator (open / resolved) and the final solution |
 
 ## How it works (short)
 
@@ -139,7 +141,7 @@ vite.config.js          Vite settings (base path for GitHub Pages, /api proxy)
 2. `App.jsx` picks the page from the link. `/chat` opens only for a logged-in user; otherwise it goes to Log in.
 3. Log in and Sign up use `useState`, one `handleChange`, and `validate()` before sending anything. Then `AuthContext` calls the back end. After login, the token is kept in localStorage and sent with every request by `api.js`.
 4. The chat sends each message to `POST /api/chat`. The back end detects the language (Arabic letters → Arabic; numbers like 3, 7, 2 inside words or words like "ktir" → Arabizi; otherwise English), finds the problem with the most matching keywords, saves both messages, and answers in the same language. No match → a ticket is opened for an operator.
-5. Operators open `/operator`, see the open tickets (customer, message, language, time), write a solution and press Resolve. The solution appears in the customer's chat as an operator message.
+5. When a ticket is open, everything the customer writes goes to the operator instead of the assistant. Operators open `/operator`, pick a ticket, and chat with the customer. Both pages check for new messages every 4 seconds. **Resolve** closes the ticket, saves the operator's last answer as the solution (training data for the model later), and the customer is back with the assistant.
 6. Next step: a trained machine-learning model in place of keyword matching (`find_answer` in `knowledge_base.py`).
 
 ## Notes

@@ -6,6 +6,7 @@ import '../styles/Chat.css'
 
 const suggestions = ['My internet is very slow', 'الانترنت تقيل كتير', 'kef bshuf rasidi?']
 const firstMessage = { from: 'bot', text: 'Hi! 👋 Tell me your problem in English, Arabic or Arabizi, typed or spoken.' }
+const REFRESH_EVERY = 4000 // kel 4 sanye mnes2al el backend iza fi messages jdide
 
 // El browser byfham el sot? (Chrome w Edge eh)
 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
@@ -16,29 +17,29 @@ export default function Chat() {
   const [typing, setTyping] = useState(false)
   const [showFeedback, setShowFeedback] = useState(false)
   const [showSuggestions, setShowSuggestions] = useState(true)
+  const [openTicket, setOpenTicket] = useState(false) // 3am yehke ma3 operator?
   const [voiceLang, setVoiceLang] = useState('en-US')
   const [recording, setRecording] = useState(false)
   const [lastBotId, setLastBotId] = useState(null) // la el feedback: ayya jawab
   const { logout } = useAuth()
 
-  // useRef la nwasel lal div taba3 el messages w nnazzel la ta7t
-  const boxRef = useRef(null)
+  // useRef: 2iyam mn7tajon bas ma badna el page t3id render kel ma yet8ayyaro
+  const boxRef = useRef(null) // el div taba3 el messages (la nnazzel la ta7t)
+  const lastIdRef = useRef(0) // akher message id jebne men el backend
+  const sendingRef = useRef(false) // 3am neb3at message halla2?
 
   useEffect(() => {
     boxRef.current.scrollTop = boxRef.current.scrollHeight
   }, [messages, typing, showFeedback])
 
-  // Awwal ma tefta7 el chat, jib el messages el 2adime men el backend
-  useEffect(() => {
-    apiRequest('/api/chat/history')
-      .then((history) => {
-        if (history.length > 0) {
-          setMessages([firstMessage, ...history])
-          setShowSuggestions(false)
-        }
-      })
-      .catch(handleError)
-  }, [])
+  const addMessage = (from, msg, id) => {
+    // (old) => ... ya3ne: khod el list el akhira w zid 3le
+    setMessages((old) => [...old, { from, text: msg, id }])
+  }
+
+  const rememberId = (id) => {
+    if (id > lastIdRef.current) lastIdRef.current = id
+  }
 
   // Iza el token khalas (401): logout, w App byeb3atak 3al login
   const handleError = (err) => {
@@ -49,31 +50,66 @@ export default function Chat() {
     }
   }
 
-  const addMessage = (from, msg) => {
-    // (old) => ... ya3ne: khod el list el akhira w zid 3le
-    setMessages((old) => [...old, { from, text: msg }])
+  // Jib el messages el jdide (men el operator masalan)
+  const loadNew = async () => {
+    if (sendingRef.current) return
+    try {
+      const data = await apiRequest('/api/chat/history?after=' + lastIdRef.current)
+      if (sendingRef.current) return // ba3atna message wa2t ma kenna nestanna: mnterko lal marra el jeye
+
+      if (data.messages.length > 0) {
+        // Ma nzid message marten (iza aslan mawjoude b nafs el id)
+        setMessages((old) => [...old, ...data.messages.filter((m) => !old.some((o) => o.id === m.id))])
+        data.messages.forEach((m) => rememberId(m.id))
+        setShowSuggestions(false)
+        if (data.messages.some((m) => m.from !== 'user')) setShowFeedback(false)
+      }
+      setOpenTicket(data.open_ticket)
+    } catch (err) {
+      if (err.status === 401) logout()
+    }
   }
+
+  // Awwal ma yefta7 el chat: jib kel shi, w ba3den kel 4 sanye shu fi jdid
+  useEffect(() => {
+    loadNew()
+    const timer = setInterval(loadNew, REFRESH_EVERY)
+    return () => clearInterval(timer) // lamma nfell men el page, wa22ef
+  }, [])
 
   // async: mneb3at lal backend w mnestanna el jawab
   const send = async (msg) => {
     const clean = msg.trim()
     if (clean === '') return
 
+    sendingRef.current = true
     setShowSuggestions(false)
     setShowFeedback(false)
     setText('')
-    addMessage('user', clean)
-    setTyping(true)
+    addMessage('user', clean) // bala id la ysir 3enna jawab el backend
+    setTyping(!openTicket) // iza 3am yehke ma3 operator, ma fi "typing..."
 
     try {
       const reply = await apiRequest('/api/chat', 'POST', { message: clean })
-      addMessage('bot', reply.answer)
-      setLastBotId(reply.message_id)
-      setShowFeedback(!reply.escalate)
+
+      // 7ot el id 3al message li ba3atneha
+      setMessages((old) => old.map((m) => (m.from === 'user' && !m.id && m.text === clean ? { ...m, id: reply.user_message_id } : m)))
+      rememberId(reply.user_message_id)
+
+      if (reply.operator) {
+        setOpenTicket(true) // el message ra7 lal operator, byjeweb ba3den
+      } else {
+        addMessage('bot', reply.answer, reply.message_id)
+        rememberId(reply.message_id)
+        setLastBotId(reply.message_id)
+        setShowFeedback(!reply.escalate)
+        if (reply.escalate) setOpenTicket(true)
+      }
     } catch (err) {
       handleError(err)
     }
     setTyping(false)
+    sendingRef.current = false
   }
 
   const handleSubmit = (e) => {
@@ -88,7 +124,8 @@ export default function Chat() {
     if (solved) {
       addMessage('info', 'Great, glad it is solved! 🎉')
     } else {
-      addMessage('info', 'Sorry about that. An operator will follow up with you.')
+      addMessage('info', 'Sorry about that. An operator will follow up with you here.')
+      setOpenTicket(true)
     }
   }
 
@@ -116,18 +153,25 @@ export default function Chat() {
     <div className="page-chat">
       <div className="chat">
         <div className="chat-head">
-          <div className="avatar">🤖</div>
+          <div className="avatar">{openTicket ? '👤' : '🤖'}</div>
           <div>
-            <b>Support Assistant</b>
+            <b>{openTicket ? 'Operator' : 'Support Assistant'}</b>
             <small>
-              <span className="online"></span>Online · English, العربية, Arabizi
+              <span className="online"></span>
+              {openTicket ? 'You are talking to a real person' : 'Online · English, العربية, Arabizi'}
             </small>
           </div>
         </div>
 
+        {openTicket && (
+          <div className="operator-banner">
+            👤 An operator is handling your problem. Write here and they will answer you.
+          </div>
+        )}
+
         <div className="messages" ref={boxRef}>
           {messages.map((m, i) => (
-            <div key={i} className={messageClass(m)}>
+            <div key={m.id || 'local-' + i} className={messageClass(m)}>
               {m.from === 'operator' && <span className="msg-label">👤 Operator</span>}
               {m.text}
             </div>
@@ -173,7 +217,7 @@ export default function Chat() {
           <input
             type="text"
             className="text-input"
-            placeholder="Write or speak your problem..."
+            placeholder={openTicket ? 'Write to the operator...' : 'Write or speak your problem...'}
             autoComplete="off"
             value={text}
             onChange={(e) => setText(e.target.value)}

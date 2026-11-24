@@ -1,10 +1,11 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { apiRequest } from '../api.js'
 import { useAuth } from '../context/AuthContext.jsx'
 import { isArabic } from '../utils/language.js'
 import '../styles/Operator.css'
 
 const languageNames = { en: 'English', ar: 'العربية', arabizi: 'Arabizi' }
+const REFRESH_EVERY = 4000 // kel 4 sanye mnjib el jdid
 
 // "2026-11-24T21:30:05" -> "24/11 21:30"
 function formatTime(iso) {
@@ -14,58 +15,112 @@ function formatTime(iso) {
   return `${day}/${month} ${time.slice(0, 5)}`
 }
 
-function TicketCard({ ticket, onResolved }) {
-  const [solution, setSolution] = useState('')
+// El mo7adase taba3 ticket wa7ad (3al yamin)
+function Conversation({ ticketId, onChanged }) {
+  const [messages, setMessages] = useState([])
+  const [status, setStatus] = useState('open')
+  const [text, setText] = useState('')
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
+  const boxRef = useRef(null)
 
-  const handleResolve = async (e) => {
-    e.preventDefault()
-    if (solution.trim() === '') {
-      setError('Please write the solution.')
-      return
-    }
-    setBusy(true)
+  const load = async () => {
     try {
-      await apiRequest(`/api/tickets/${ticket.id}/resolve`, 'POST', { solution })
-      onResolved()
+      const data = await apiRequest(`/api/tickets/${ticketId}/messages`)
+      setMessages(data.messages)
+      setStatus(data.status)
     } catch (err) {
       setError(err.message)
-      setBusy(false)
     }
   }
 
+  // Kel ma tna22e ticket tene: jib el mo7adase, w ba3den kel 4 sanye
+  useEffect(() => {
+    setMessages([])
+    setText('')
+    setError('')
+    load()
+    const timer = setInterval(load, REFRESH_EVERY)
+    return () => clearInterval(timer)
+  }, [ticketId])
+
+  useEffect(() => {
+    if (boxRef.current) boxRef.current.scrollTop = boxRef.current.scrollHeight
+  }, [messages])
+
+  const sendReply = async (e) => {
+    e.preventDefault()
+    if (text.trim() === '') return
+    setBusy(true)
+    try {
+      await apiRequest(`/api/tickets/${ticketId}/reply`, 'POST', { text })
+      setText('')
+      setError('')
+      await load()
+      onChanged()
+    } catch (err) {
+      setError(err.message)
+    }
+    setBusy(false)
+  }
+
+  const resolve = async () => {
+    setBusy(true)
+    try {
+      // Iza fi message maktoube w ma n3atet, btrou7 ma3 el Resolve
+      await apiRequest(`/api/tickets/${ticketId}/resolve`, 'POST', { solution: text })
+      setText('')
+      setError('')
+      await load()
+      onChanged()
+    } catch (err) {
+      setError(err.message)
+    }
+    setBusy(false)
+  }
+
+  const bubbleClass = (m) => {
+    let cls = 'bubble bubble-' + m.from
+    if (isArabic(m.text)) cls += ' rtl'
+    return cls
+  }
+
+  const senderName = { user: 'Customer', bot: 'Assistant', operator: 'You' }
+
   return (
-    <div className="ticket">
-      <div className="ticket-top">
-        <span className="ticket-id">#{ticket.id}</span>
-        <b>{ticket.customer_name}</b>
-        <span className="ticket-email">{ticket.customer_email}</span>
-        <span className="ticket-lang">{languageNames[ticket.language] || ticket.language}</span>
-        <span className="ticket-time">{formatTime(ticket.created_at)}</span>
+    <div className="conversation">
+      <div className="conv-messages" ref={boxRef}>
+        {messages.map((m) => (
+          <div key={m.id} className={bubbleClass(m)}>
+            <span className="bubble-who">
+              {senderName[m.from]} · {formatTime(m.created_at)}
+            </span>
+            {m.text}
+          </div>
+        ))}
       </div>
 
-      <p className={isArabic(ticket.message) ? 'ticket-msg rtl' : 'ticket-msg'}>{ticket.message}</p>
+      {error && <div className="note bad">{error}</div>}
 
-      {ticket.status === 'open' ? (
-        <form className="ticket-form" onSubmit={handleResolve}>
+      {status === 'open' ? (
+        <form className="reply-form" onSubmit={sendReply}>
           <textarea
             rows="2"
-            placeholder="Write the solution for the customer..."
-            value={solution}
-            onChange={(e) => {
-              setSolution(e.target.value)
-              setError('')
-            }}
+            placeholder="Write to the customer..."
+            value={text}
+            onChange={(e) => setText(e.target.value)}
           />
-          {error && <span className="error">{error}</span>}
-          <button type="submit" disabled={busy}>{busy ? '...' : 'Resolve'}</button>
+          <div className="reply-buttons">
+            <button type="button" className="resolve-btn" onClick={resolve} disabled={busy}>
+              ✓ Resolve
+            </button>
+            <button type="submit" className="send-btn" disabled={busy}>
+              {busy ? '...' : 'Send'}
+            </button>
+          </div>
         </form>
       ) : (
-        <div className="ticket-solution">
-          <span>Solution · {formatTime(ticket.resolved_at)}</span>
-          <p className={isArabic(ticket.solution) ? 'rtl' : ''}>{ticket.solution}</p>
-        </div>
+        <p className="closed-note">✓ This ticket is resolved.</p>
       )}
     </div>
   )
@@ -75,12 +130,12 @@ export default function Operator() {
   const [status, setStatus] = useState('open') // ayya tab
   const [tickets, setTickets] = useState([])
   const [counts, setCounts] = useState({ open: 0, resolved: 0 })
+  const [selectedId, setSelectedId] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const { logout } = useAuth()
 
   const loadTickets = async () => {
-    setLoading(true)
     try {
       const data = await apiRequest('/api/tickets?status=' + status)
       setTickets(data.tickets)
@@ -93,19 +148,20 @@ export default function Operator() {
     setLoading(false)
   }
 
-  // Kel ma yet8ayyar el tab, jib el tickets men jdid
+  // Kel ma yet8ayyar el tab: jib el tickets, w ba3den kel 4 sanye
   useEffect(() => {
+    setLoading(true)
+    setSelectedId(null)
     loadTickets()
+    const timer = setInterval(loadTickets, REFRESH_EVERY)
+    return () => clearInterval(timer)
   }, [status])
 
   return (
     <div className="page-operator">
       <div className="operator-head">
-        <div>
-          <h1>Tickets</h1>
-          <p>Problems the assistant could not solve, or that the customer said were not solved.</p>
-        </div>
-        <button type="button" className="refresh-btn" onClick={loadTickets}>↻ Refresh</button>
+        <h1>Tickets</h1>
+        <p>Problems the assistant could not solve. Talk with the customer, then resolve the ticket.</p>
       </div>
 
       <div className="tabs">
@@ -118,13 +174,44 @@ export default function Operator() {
       </div>
 
       {error && <div className="note bad">{error}</div>}
-      {loading && <p className="empty">Loading...</p>}
-      {!loading && !error && tickets.length === 0 && (
-        <p className="empty">{status === 'open' ? 'No open tickets 🎉' : 'No resolved tickets yet.'}</p>
-      )}
 
-      <div className="ticket-list">
-        {!loading && tickets.map((t) => <TicketCard key={t.id} ticket={t} onResolved={loadTickets} />)}
+      <div className="operator-layout">
+        {/* 3al shmel: list el tickets */}
+        <div className="ticket-list">
+          {loading && <p className="empty">Loading...</p>}
+          {!loading && tickets.length === 0 && (
+            <p className="empty">{status === 'open' ? 'No open tickets 🎉' : 'No resolved tickets yet.'}</p>
+          )}
+          {!loading &&
+            tickets.map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                className={t.id === selectedId ? 'ticket selected' : 'ticket'}
+                onClick={() => setSelectedId(t.id)}
+              >
+                <div className="ticket-top">
+                  <b>{t.customer_name}</b>
+                  {t.status === 'open' && t.last_from === 'user' && <span className="waiting">Waiting</span>}
+                  <span className="ticket-time">{formatTime(t.created_at)}</span>
+                </div>
+                <p className={isArabic(t.message) ? 'ticket-msg rtl' : 'ticket-msg'}>{t.message}</p>
+                <div className="ticket-bottom">
+                  <span className="ticket-lang">{languageNames[t.language] || t.language}</span>
+                  <span>#{t.id} · {t.message_count} messages</span>
+                </div>
+              </button>
+            ))}
+        </div>
+
+        {/* 3al yamin: el mo7adase */}
+        <div className="conversation-panel">
+          {selectedId ? (
+            <Conversation ticketId={selectedId} onChanged={loadTickets} />
+          ) : (
+            <p className="empty">Choose a ticket to see the conversation.</p>
+          )}
+        </div>
       </div>
     </div>
   )

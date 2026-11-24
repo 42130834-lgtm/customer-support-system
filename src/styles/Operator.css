@@ -1,36 +1,19 @@
 /* Operator page (Operator.jsx) */
 .page-operator {
   width: 100%;
-  max-width: 900px;
+  max-width: 1100px;
   margin: 0 auto;
-  padding: 30px 20px 50px;
+  padding: 26px 20px 40px;
 }
 
-.operator-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 16px;
-}
 .operator-head h1 { margin: 0 0 4px; }
 .operator-head p { margin: 0; color: #6b7280; font-size: 14px; }
-
-.refresh-btn {
-  border: 1px solid #dbe3ec;
-  background: #fff;
-  color: var(--navy);
-  border-radius: 20px;
-  padding: 8px 16px;
-  font-weight: 600;
-  cursor: pointer;
-}
-.refresh-btn:hover { background: var(--navy); color: #fff; }
 
 /* tabs: Open / Resolved */
 .tabs {
   display: flex;
   gap: 8px;
-  margin: 22px 0 16px;
+  margin: 18px 0 14px;
 }
 .tab {
   border: none;
@@ -55,99 +38,181 @@
 .page-operator .empty {
   text-align: center;
   color: #6b7280;
-  padding: 40px 0;
+  padding: 40px 10px;
 }
 
 .page-operator .note {
   font-size: 13px;
-  padding: 10px 14px;
+  padding: 9px 14px;
   border-radius: 12px;
-  margin-bottom: 12px;
+  margin-bottom: 10px;
 }
 .page-operator .note.bad { background: #fee2e2; color: var(--red); }
 
-/* kel ticket */
+.page-operator .rtl { direction: rtl; text-align: right; }
+
+/* list 3al shmel, mo7adase 3al yamin */
+.operator-layout {
+  display: grid;
+  grid-template-columns: 340px 1fr;
+  gap: 18px;
+  align-items: start;
+}
+
 .ticket-list {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 10px;
+  max-height: 70vh;
+  overflow-y: auto;
+  padding: 2px;
 }
 
 .ticket {
+  width: 100%;
+  text-align: left;
+  font-family: inherit;
+  border: 2px solid transparent;
   background: #fff;
-  border-radius: 16px;
-  padding: 18px 20px;
-  box-shadow: 0 6px 20px rgba(30, 58, 95, 0.08);
-  animation: pop 0.25s ease;
+  border-radius: 14px;
+  padding: 12px 14px;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(30, 58, 95, 0.08);
+  transition: border-color 0.15s;
 }
+.ticket:hover { border-color: #c7d2fe; }
+.ticket.selected { border-color: var(--blue); }
 
 .ticket-top {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   font-size: 14px;
 }
-.ticket-id { color: #94a3b8; font-weight: 600; }
-.ticket-email { color: #6b7280; font-size: 13px; }
+.waiting {
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: #fef3c7;
+  color: #b45309;
+  font-size: 11px;
+  font-weight: 700;
+}
+.ticket-time { margin-left: auto; color: #94a3b8; font-size: 12px; }
+
+.ticket-msg {
+  margin: 6px 0;
+  font-size: 14px;
+  color: #374151;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ticket-bottom {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: #94a3b8;
+}
 .ticket-lang {
-  padding: 2px 10px;
+  padding: 1px 8px;
   border-radius: 999px;
   background: #eef2ff;
   color: var(--navy);
-  font-size: 12px;
   font-weight: 600;
 }
-.ticket-time { margin-left: auto; color: #94a3b8; font-size: 13px; }
 
-.ticket-msg {
-  margin: 12px 0;
-  padding: 12px 14px;
-  border-radius: 12px;
-  background: #f8faff;
-  border: 1px solid #e0e7f1;
-  font-size: 15px;
+/* el mo7adase */
+.conversation-panel {
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 6px 20px rgba(30, 58, 95, 0.08);
+  min-height: 300px;
 }
 
-.ticket-form {
+.conversation {
+  display: flex;
+  flex-direction: column;
+  height: 70vh;
+}
+
+.conv-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: #f8faff;
+  border-radius: 16px 16px 0 0;
+}
+
+.bubble {
+  max-width: 75%;
+  padding: 9px 13px;
+  border-radius: 14px;
+  font-size: 14px;
+  line-height: 1.4;
+  overflow-wrap: break-word;
+}
+.bubble-who {
+  display: block;
+  margin-bottom: 3px;
+  font-size: 11px;
+  font-weight: 700;
+  opacity: 0.7;
+}
+/* hon el customer 3al shmel, w el operator (enta) 3al yamin */
+.bubble-user { align-self: flex-start; background: #fff; border: 1px solid #e0e7f1; }
+.bubble-bot { align-self: flex-start; background: #eef2ff; color: #475569; }
+.bubble-operator { align-self: flex-end; background: var(--blue); color: #fff; }
+
+.reply-form {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  padding: 12px 16px 16px;
+  border-top: 1px solid #eef2f7;
 }
-.ticket-form textarea {
+.reply-form textarea {
   width: 100%;
   padding: 10px 14px;
   border: 1px solid #dbe3ec;
   border-radius: 12px;
   font-family: inherit;
   font-size: 14px;
-  resize: vertical;
+  resize: none;
   outline: none;
 }
-.ticket-form textarea:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15); }
-.ticket-form .error { color: var(--red); font-size: 12px; }
-.ticket-form button {
-  align-self: flex-end;
+.reply-form textarea:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15); }
+
+.reply-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.reply-buttons button {
   border: none;
   border-radius: 20px;
-  padding: 9px 22px;
-  background: var(--blue);
-  color: #fff;
+  padding: 9px 20px;
   font-weight: 600;
   cursor: pointer;
 }
-.ticket-form button:disabled { opacity: 0.7; cursor: wait; }
+.reply-buttons button:disabled { opacity: 0.7; cursor: wait; }
+.reply-buttons .send-btn { background: var(--blue); color: #fff; }
+.reply-buttons .resolve-btn { background: #dcfce7; color: #15803d; }
 
-.ticket-solution {
-  border-left: 3px solid #4ade80;
-  padding-left: 12px;
+.closed-note {
+  margin: 0;
+  padding: 14px 16px;
+  color: #15803d;
+  font-weight: 600;
+  border-top: 1px solid #eef2f7;
 }
-.ticket-solution span { font-size: 12px; color: #15803d; font-weight: 600; }
-.ticket-solution p { margin: 4px 0 0; }
 
-.page-operator .rtl { direction: rtl; text-align: right; }
-
-@media (max-width: 560px) {
-  .operator-head { flex-direction: column; }
-  .ticket-time { margin-left: 0; }
+/* Mobile: el list fo2 w el mo7adase ta7ta */
+@media (max-width: 760px) {
+  .operator-layout { grid-template-columns: 1fr; }
+  .ticket-list { max-height: 260px; }
+  .conversation { height: 60vh; }
 }
