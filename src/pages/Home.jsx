@@ -1,90 +1,88 @@
-import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
-import Nav from "../components/Nav.jsx";
-import "../styles/home.css";
+import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
+import { isArabic } from '../utils/language.js'
+import '../styles/Home.css'
 
-const CONVOS = [
-  { label: "English", rtl: false, q: "My internet is very slow", a: "Restart your router, wait 30 seconds, then check your data package. 🔧" },
-  { label: "العربية", rtl: true, q: "الانترنت تقيل كتير", a: "أعد تشغيل الراوتر وانتظر 30 ثانية، ثم تأكد من باقة الداتا. 🔧" },
-  { label: "Arabizi", rtl: false, q: "el net batii2 ktir", a: "A3ed tashghil l router w estanna 30 sanye, baden etakked mn bakit l data. 🔧" },
-];
+// El amthile li bi farjiyon el telephone
+const examples = [
+  { label: 'English', question: 'My internet is very slow', answer: 'Restart your router, wait 30 seconds, then check your data package. 🔧' },
+  { label: 'العربية', question: 'الانترنت تقيل كتير', answer: 'أعد تشغيل الراوتر وانتظر 30 ثانية، ثم تأكد من باقة الداتا. 🔧' },
+  { label: 'Arabizi', question: 'el net batii2 ktir', answer: 'A3ed tashghil l router w estanna 30 sanye, baden etakked mn bakit l data. 🔧' },
+]
 
-const STEPS = [
-  { title: "Describe it", text: "Type or use the mic. Say it the way you talk, even with slang." },
-  { title: "Get a tested fix", text: "The system finds the closest solved problem and answers in your language." },
-  { title: "An operator steps in", text: "Not solved? A real operator takes over, and the system learns from it." },
-];
+const steps = [
+  { title: 'Describe it', text: 'Type or use the mic. Say it the way you talk, even with slang.' },
+  { title: 'Get a tested fix', text: 'The system finds the closest solved problem and answers in your language.' },
+  { title: 'An operator steps in', text: 'Not solved? A real operator takes over, and the system learns from it.' },
+]
 
-const STATS = [
-  { big: "3", small: "languages understood" },
-  { big: "🎤", small: "voice or text" },
-  { big: "24/7", small: "always available" },
-  { big: "🧠", small: "learns every day" },
-];
+const stats = [
+  { big: '3', small: 'languages understood' },
+  { big: '🎤', small: 'voice or text' },
+  { big: '24/7', small: 'always available' },
+  { big: '🧠', small: 'learns every day' },
+]
 
-// El demo taba3 el telephone: byekteb el so2al, ba3den "typing...", ba3den el jawab
 function PhoneDemo() {
-  const [current, setCurrent] = useState(0);
-  const [typed, setTyped] = useState("");
-  const [phase, setPhase] = useState("typing"); // typing -> thinking -> answer
+  const [current, setCurrent] = useState(0) // ayya mathal
+  const [letters, setLetters] = useState(0) // kam 7arf ktabna men el so2al
+  const [showAnswer, setShowAnswer] = useState(false)
 
+  const example = examples[current]
+  const doneTyping = letters === example.question.length
+
+  const choose = (index) => {
+    setCurrent(index)
+    setLetters(0)
+    setShowAnswer(false)
+  }
+
+  // Kel marra byet8ayyar shi, mnestanna shway w mna3mel el khatwe el jeye
   useEffect(() => {
-    const c = CONVOS[current];
-    const timers = [];
-    const at = (ms, fn) => timers.push(setTimeout(fn, ms));
+    let timer
+    if (!doneTyping) {
+      timer = setTimeout(() => setLetters(letters + 1), 45) // 7arf jdid
+    } else if (!showAnswer) {
+      timer = setTimeout(() => setShowAnswer(true), 1200) // "typing..." ba3den el jawab
+    } else {
+      timer = setTimeout(() => choose((current + 1) % examples.length), 3500) // el mathal el jeye
+    }
+    return () => clearTimeout(timer)
+  }, [letters, showAnswer, current])
 
-    setPhase("typing");
-    setTyped("");
-    for (let n = 1; n <= c.q.length; n++) at(n * 45, () => setTyped(c.q.slice(0, n)));
-    const done = c.q.length * 45;
-    at(done + 400, () => setPhase("thinking"));
-    at(done + 1600, () => setPhase("answer"));
-    at(done + 5100, () => setCurrent((i) => (i + 1) % CONVOS.length));
+  const rtl = isArabic(example.question) ? ' rtl' : ''
 
-    return () => timers.forEach(clearTimeout); // iza el user kabas chip, nwa22ef el 2adim
-  }, [current]);
-
-  const c = CONVOS[current];
   return (
     <div className="phone">
       <div className="phone-top">
-        <span className="dot" /> Support Assistant
+        <span className="dot"></span> Support Assistant
       </div>
       <div className="screen">
-        <div className={"bubble u" + (c.rtl ? " rtl" : "")}>{typed}</div>
-        {phase === "thinking" && (
+        <div className={'bubble u' + rtl}>{example.question.slice(0, letters)}</div>
+        {doneTyping && !showAnswer && (
           <div className="bubble b typing">
-            <span /><span /><span />
+            <span></span><span></span><span></span>
           </div>
         )}
-        {phase === "answer" && <div className={"bubble b" + (c.rtl ? " rtl" : "")}>{c.a}</div>}
+        {showAnswer && <div className={'bubble b' + rtl}>{example.answer}</div>}
       </div>
       <div className="chips">
-        {CONVOS.map((cv, i) => (
-          <button key={cv.label} className={"chip" + (i === current ? " on" : "")} onClick={() => setCurrent(i)}>
-            {cv.label}
+        {examples.map((ex, i) => (
+          <button key={ex.label} className={i === current ? 'chip on' : 'chip'} onClick={() => choose(i)}>
+            {ex.label}
           </button>
         ))}
       </div>
     </div>
-  );
+  )
 }
 
 export default function Home() {
   return (
     <div className="page-home">
-      <Nav
-        sticky
-        links={[
-          { to: "/", label: "Home" },
-          { to: "/login", label: "Log in" },
-          { to: "/signup", label: "Sign up" },
-        ]}
-      />
-
       <section className="hero">
-        <div className="blob b1" />
-        <div className="blob b2" />
+        <div className="blob b1"></div>
+        <div className="blob b2"></div>
         <div>
           <span className="pill">✨ Telecom support, in your own words</span>
           <h1>
@@ -106,11 +104,11 @@ export default function Home() {
         <h2>How it works</h2>
         <p className="lead">Three simple steps. No waiting on hold.</p>
         <div className="steps">
-          {STEPS.map((s, i) => (
-            <div className="card" key={s.title}>
+          {steps.map((step, i) => (
+            <div className="card" key={step.title}>
               <div className="num">{i + 1}</div>
-              <h3>{s.title}</h3>
-              <p>{s.text}</p>
+              <h3>{step.title}</h3>
+              <p>{step.text}</p>
             </div>
           ))}
         </div>
@@ -118,7 +116,7 @@ export default function Home() {
 
       <section className="section">
         <div className="stats">
-          {STATS.map((s) => (
+          {stats.map((s) => (
             <div className="stat" key={s.small}>
               <b>{s.big}</b>
               <small>{s.small}</small>
@@ -134,8 +132,6 @@ export default function Home() {
           <Link className="btn" to="/signup">Sign up now</Link>
         </div>
       </div>
-
-      <footer className="footer">Intelligent Operation and Customer Support System · Senior project</footer>
     </div>
-  );
+  )
 }

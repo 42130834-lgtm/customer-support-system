@@ -6,4 +6,10 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   plugins: [react()],
   base: '/customer-support-system/',
+  server: {
+    // npm run dev: kel request la /api byerja3 3al backend (uvicorn 3a port 8000)
+    proxy: {
+      '/api': 'http://127.0.0.1:8000',
+    },
+  },
 })

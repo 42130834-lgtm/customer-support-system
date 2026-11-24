@@ -1,0 +1,90 @@
+.navbar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: var(--steel);
+}
+
+.navbar-inner {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 14px 24px;
+}
+
+.logo {
+  font-weight: 700;
+  font-size: 18px;
+  color: #000;
+  text-decoration: none;
+}
+
+.nav-links {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.nav-links a,
+.logout-btn {
+  color: var(--ink);
+  text-decoration: none;
+  font-size: 14px;
+  font-family: inherit;
+  padding: 6px 12px;
+  border-radius: 6px;
+}
+.nav-links a:hover,
+.logout-btn:hover { background: rgba(255, 255, 255, 0.35); }
+
+/* NavLink bizid "active" la7alo 3al page li enta fiya */
+.nav-links a.active {
+  background: var(--navy);
+  color: #fff;
+}
+
+.nav-user {
+  margin-left: auto;
+  font-size: 14px;
+  opacity: 0.8;
+}
+
+.logout-btn {
+  border: none;
+  background: none;
+  cursor: pointer;
+}
+
+.menu-btn {
+  display: none;
+  margin-left: auto;
+  border: none;
+  background: none;
+  font-size: 22px;
+  cursor: pointer;
+  color: var(--ink);
+}
+
+/* Mobile: el links bitsakkar w byetla3 zer ☰ */
+@media (max-width: 640px) {
+  .menu-btn { display: block; }
+
+  .nav-links {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    flex-direction: column;
+    align-items: stretch;
+    padding: 10px 16px 16px;
+    background: var(--steel);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.12);
+  }
+  .nav-links.open { display: flex; }
+
+  .nav-user { margin-left: 0; padding: 6px 12px; }
+  .logout-btn { text-align: left; }
+}

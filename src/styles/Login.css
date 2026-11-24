@@ -1,0 +1,179 @@
+/* Login page (Login.jsx) */
+.page-login {
+  position: relative;
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 36px 16px 50px;
+}
+/* blobs el mlawwane bel background */
+.page-login .blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(60px);
+  opacity: .45;
+  z-index: 0;
+  animation: float 9s ease-in-out infinite;
+}
+.page-login .b1 {
+  width: 240px;
+  height: 240px;
+  background: #93c5fd;
+  top: 20px;
+  left: 6%;
+}
+.page-login .b2 {
+  width: 220px;
+  height: 220px;
+  background: #c4b5fd;
+  bottom: 10px;
+  right: 8%;
+  animation-delay: -4s;
+}
+
+/* ring */
+.page-login .ring {
+  position: relative;
+  z-index: 1;
+  width: min(92vw, 500px);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  padding: 5px;
+  background: #fff;
+  box-shadow: 0 20px 60px rgba(37,99,235,.25);
+  overflow: hidden;
+}
+.page-login .ring::before {
+  content: "";
+  position: absolute;
+  inset: -50%;
+  background: conic-gradient(from 0deg, #2563eb, #7c3aed, #7ea5bd, #93c5fd, #2563eb);
+  animation: spin 6s linear infinite;
+}
+@keyframes spin { to { transform:rotate(360deg); } }
+.page-login .inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* el form */
+.page-login .panel {
+  width: 68%;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  text-align: center;
+  animation: pop .35s ease;
+}
+
+.page-login .panel h2 {
+  margin: 0;
+  font-size: 26px;
+  background: linear-gradient(90deg,#2563eb,#7c3aed);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.page-login .hint {
+  margin: 0 0 6px;
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.page-login .panel input {
+  width: 100%;
+  padding: 12px 16px;
+  border: 1px solid #dbe3ec;
+  border-radius: 24px;
+  font-size: 14px;
+  outline: none;
+  background: #f8faff;
+  transition: .15s;
+}
+.page-login .panel input:focus {
+  border-color: var(--blue);
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(37,99,235,.15);
+}
+
+.page-login .go {
+  margin-top: 4px;
+  padding: 13px;
+  border: none;
+  border-radius: 24px;
+  background: linear-gradient(90deg,#2563eb,#7c3aed);
+  color: #fff;
+  font-weight: 700;
+  font-size: 14px;
+  letter-spacing: .5px;
+  cursor: pointer;
+  box-shadow: 0 8px 18px rgba(37,99,235,.3);
+  transition: transform .15s, box-shadow .15s;
+}
+.page-login .go:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 24px rgba(37,99,235,.4);
+}
+.page-login .go:active { transform:scale(.97); }
+.page-login .go:disabled {
+  opacity: .7;
+  cursor: wait;
+}
+
+.page-login .switch {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: #6b7280;
+}
+.page-login .switch a {
+  color: var(--blue);
+  font-weight: 600;
+  text-decoration: none;
+}
+.page-login .switch a:hover { text-decoration:underline; }
+
+.page-login .note {
+  font-size: 12.5px;
+  padding: 7px 12px;
+  border-radius: 12px;
+}
+.page-login .note.ok {
+  background: #dcfce7;
+  color: #15803d;
+}
+.page-login .note.bad {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+/* errors ta7t kel field (men validate) */
+.page-login .panel input.invalid {
+  border-color: var(--red);
+  background: #fff7f7;
+}
+.page-login .error {
+  margin-top: -6px;
+  font-size: 12px;
+  color: var(--red);
+  text-align: left;
+  padding-left: 14px;
+}
+
+@media (max-width:420px) {
+  .page-login .panel {
+    width: 74%;
+    gap: 8px;
+  }
+  .page-login .panel h2 { font-size:22px; }
+  .page-login .panel input {
+    padding: 10px 14px;
+    font-size: 13px;
+  }
+}

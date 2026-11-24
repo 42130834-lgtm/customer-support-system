@@ -4,5 +4,8 @@ dist
 *.log
 __pycache__/
 *.pyc
-backend/users.json
 .venv/
+venv/
+support.db
+backend/support.db
+.env

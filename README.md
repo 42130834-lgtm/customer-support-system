@@ -2,7 +2,7 @@
 
 Support Assistant is a telecom customer-support website. Users create an account, log in, and describe their problem in **English, Arabic or Lebanese Arabizi**, typed or spoken. The assistant finds a tested fix and answers in the same language. If no fix is found, the problem is passed to an operator.
 
-This repository holds **Phase 1 (Front-End Development)** of the project. The back end (FastAPI) comes in Phase 2.
+The project has a **React front end** and a **FastAPI back end** with a SQLite database. The back end stores accounts (hashed passwords), all chat messages and the tickets sent to operators.
 
 **Live site:** https://42130834-lgtm.github.io/customer-support-system/
 
@@ -11,12 +11,14 @@ This repository holds **Phase 1 (Front-End Development)** of the project. The ba
 ## Features
 
 - **Home page** with a hero section, an animated phone demo in 3 languages, "How it works" steps and stats
-- **Log in / Sign up** on one animated page, with show/hide password and validation messages
+- **Log in** and **Sign up** pages, with show/hide password and validation messages
 - **Protected chat page**: only logged-in users can open it
 - **Chat assistant** that detects the language (English, Arabic, Arabizi) and answers in the same one
 - **Voice input** with the microphone (English or Arabic), in browsers that support it
 - **Quick suggestions** and **"Solved? Yes / No"** feedback after each answer
-- **Accounts saved in localStorage**, with passwords stored as a SHA-256 hash
+- **Back end with a database**: accounts with hashed passwords, login tokens, saved chat history and tickets
+- **404 page** for links that do not exist
+- **Menu button** on small screens
 - **Responsive design** for phones, tablets and computers
 
 ## Technologies used
@@ -26,21 +28,39 @@ This repository holds **Phase 1 (Front-End Development)** of the project. The ba
 | React 18 | Builds the user interface from reusable components |
 | React Router 6 | Moves between pages without reloading the site |
 | Vite | Runs the project during development and builds it for the web |
-| CSS (own stylesheets) | All the design; one CSS file per page |
+| CSS (own stylesheets) | All the design; one CSS file per page in the styles folder |
 | Web Speech API | Turns the user's voice into text |
-| localStorage | Keeps accounts and the login session in the browser |
+| Context API (useContext) | Shares the logged-in user with every page |
+| localStorage | Keeps the login token in the browser |
+| FastAPI (Python) | The back end API |
+| SQLite | The database |
+| JWT | Login tokens |
 | GitHub Pages | Hosts the live website |
 
 ## How to run it on your computer
 
-You need [Node.js](https://nodejs.org) installed.
+You need [Node.js](https://nodejs.org) and [Python 3.10+](https://www.python.org). Use **two terminals**.
+
+**Terminal 1 – back end**
 
 ```bash
-npm install        # download the libraries (only the first time)
-npm run dev        # start the site
+cd backend
+python -m venv venv            # only the first time
+venv\Scripts\activate           # Windows (Mac/Linux: source venv/bin/activate)
+pip install -r requirements.txt   # only the first time
+uvicorn main:app --reload
 ```
 
-Then open the link shown in the terminal (http://localhost:5173/customer-support-system/).
+The API runs at http://127.0.0.1:8000. Try every endpoint at http://127.0.0.1:8000/docs.
+
+**Terminal 2 – front end**
+
+```bash
+npm install        # only the first time
+npm run dev
+```
+
+Then open http://localhost:5173/customer-support-system/. During development, Vite sends every `/api/...` request to the back end (see `vite.config.js`).
 
 ## How to publish it
 
@@ -48,39 +68,68 @@ Then open the link shown in the terminal (http://localhost:5173/customer-support
 npm run deploy
 ```
 
-This builds the site into the `dist` folder and uploads it to the `gh-pages` branch, which GitHub Pages shows online.
+This builds the front end and uploads it to the `gh-pages` branch. The live site needs the back end online too: put the back end's link in a file `.env.production` as `VITE_API_URL=https://...` before deploying.
 
 ## Project structure
 
 ```
+backend/
+  main.py               the API routes (signup, login, me, chat, feedback, history)
+  database.py           SQLite database: tables and all SQL queries
+  security.py           password hashing and login tokens (JWT)
+  knowledge_base.py     known problems, language detection, find_answer()
+  requirements.txt      Python libraries
 src/
+  api.js                apiRequest(): every call to the back end goes through here (adds the token)
   components/
-    Nav.jsx             top menu (links, active page, Log out button)
-    RequireAuth.jsx     sends the user to Log in if they are not logged in
-  data/
-    knowledgeBase.js    known problems, their fixes in 3 languages, and language detection
+    Navbar.jsx          top menu; changes when the user is logged in; menu button on small screens
+    Footer.jsx          bottom of every page (not on the chat page)
+    PasswordInput.jsx   password field with a show/hide button (used by Log in and Sign up)
+  context/
+    AuthContext.jsx     the logged-in user and token, shared by the whole site (useContext + localStorage)
   pages/                one file per page
-    Home.jsx, Auth.jsx (log in + sign up), Chat.jsx
-  styles/               CSS files (base.css holds colours, the menu and shared styles)
-  api.js                all data actions: signup, login, logout, me, chat
+    Home.jsx, Login.jsx, Signup.jsx, Chat.jsx, NotFound.jsx
+  styles/               CSS files (App.css holds colours, layout and shared animations)
+  utils/
+    language.js         isArabic(): right-to-left messages
   App.jsx               all the routes of the site
-  main.jsx              starting point: router
-backend/                FastAPI server for Phase 2 (not used by the live site yet)
+  main.jsx              starting point: router + auth provider
 index.html              the single HTML page React runs in
-vite.config.js          Vite settings (base path for GitHub Pages)
+vite.config.js          Vite settings (base path for GitHub Pages, /api proxy)
 ```
+
+## API
+
+| Method | Path | Login needed | What it does |
+|---|---|---|---|
+| POST | /api/auth/signup | No | Creates an account (password stored hashed) |
+| POST | /api/auth/login | No | Checks email and password, returns a token |
+| GET | /api/auth/me | Yes | Returns the logged-in user |
+| POST | /api/chat | Yes | Saves the message, returns the answer; no answer → opens a ticket |
+| POST | /api/feedback | Yes | "Solved? Yes / No"; No → opens a ticket |
+| GET | /api/chat/history | Yes | The user's previous messages |
+
+"Login needed" means the request carries the header `Authorization: Bearer <token>`.
+
+## Database
+
+| Table | Holds |
+|---|---|
+| users | name, email, password hash, role (customer / operator / admin) |
+| messages | every user and bot message, its language, whether it was escalated or solved |
+| tickets | problems sent to an operator (open / resolved) |
 
 ## How it works (short)
 
-1. `main.jsx` starts React inside `index.html`, wrapped in `BrowserRouter`.
-2. `App.jsx` picks the page to show from the link. `/chat` is wrapped in `RequireAuth`, which checks the session first.
-3. Every page talks to `api.js` only. In Phase 1, `api.js` saves accounts in localStorage and gets answers from `data/knowledgeBase.js`.
-4. The chat detects the language (Arabic letters → Arabic; numbers like 3, 7, 2 inside words or words like "ktir" → Arabizi; otherwise English), scores each known problem by its keywords, and returns the fix in that language.
-5. In Phase 2, only `api.js` changes: each function will call the FastAPI server (`/api/...`) instead. The pages stay the same.
+1. `main.jsx` starts React, wrapped in `BrowserRouter` (pages) and `AuthProvider` (logged-in user).
+2. `App.jsx` picks the page from the link. `/chat` opens only for a logged-in user; otherwise it goes to Log in.
+3. Log in and Sign up use `useState`, one `handleChange`, and `validate()` before sending anything. Then `AuthContext` calls the back end. After login, the token is kept in localStorage and sent with every request by `api.js`.
+4. The chat sends each message to `POST /api/chat`. The back end detects the language (Arabic letters → Arabic; numbers like 3, 7, 2 inside words or words like "ktir" → Arabizi; otherwise English), finds the problem with the most matching keywords, saves both messages, and answers in the same language. No match → a ticket is opened for an operator.
+5. Next steps: operator dashboard for tickets, and a trained machine-learning model in place of keyword matching (`find_answer` in `knowledge_base.py`).
 
 ## Notes
 
-- This is a front-end demo: accounts live only in the browser they were created in.
+- The database file `backend/support.db` is created on first run and is not uploaded to GitHub.
 - Voice input works in Chrome and Edge.
 
 ## Author
