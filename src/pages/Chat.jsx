@@ -128,6 +128,7 @@ export default function Chat() {
         <div className="messages" ref={boxRef}>
           {messages.map((m, i) => (
             <div key={i} className={messageClass(m)}>
+              {m.from === 'operator' && <span className="msg-label">👤 Operator</span>}
               {m.text}
             </div>
           ))}

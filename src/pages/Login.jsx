@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import PasswordInput from '../components/PasswordInput.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 import '../styles/Login.css'
@@ -12,7 +12,6 @@ export default function Login() {
   const [loginError, setLoginError] = useState('')
   const [busy, setBusy] = useState(false)
   const { login } = useAuth()
-  const navigate = useNavigate()
   const location = useLocation()
 
   // Iza jeye men el Signup, byeb3atlna { created: true }
@@ -41,11 +40,8 @@ export default function Login() {
       setBusy(true)
       const error = await login(form.email, form.password)
       setBusy(false)
-      if (error) {
-        setLoginError(error)
-      } else {
-        navigate('/chat')
-      }
+      // Iza zabat, ma mna3mel shi: App.jsx byeb3at el user 3al chat (aw el operator 3al tickets)
+      if (error) setLoginError(error)
     }
   }
 

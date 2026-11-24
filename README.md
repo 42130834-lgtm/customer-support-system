@@ -17,6 +17,7 @@ The project has a **React front end** and a **FastAPI back end** with a SQLite d
 - **Voice input** with the microphone (English or Arabic), in browsers that support it
 - **Quick suggestions** and **"Solved? Yes / No"** feedback after each answer
 - **Back end with a database**: accounts with hashed passwords, login tokens, saved chat history and tickets
+- **Operator dashboard**: open and resolved tickets; the operator's answer goes back to the customer's chat
 - **404 page** for links that do not exist
 - **Menu button** on small screens
 - **Responsive design** for phones, tablets and computers
@@ -70,6 +71,16 @@ npm run deploy
 
 This builds the front end and uploads it to the `gh-pages` branch. The live site needs the back end online too: put the back end's link in a file `.env.production` as `VITE_API_URL=https://...` before deploying.
 
+## Making an operator
+
+Sign up normally, then in the `backend` folder (with the venv active):
+
+```bash
+python make_operator.py your@email.com
+```
+
+Log out and log in again: the menu shows **Tickets**.
+
 ## Project structure
 
 ```
@@ -78,6 +89,7 @@ backend/
   database.py           SQLite database: tables and all SQL queries
   security.py           password hashing and login tokens (JWT)
   knowledge_base.py     known problems, language detection, find_answer()
+  make_operator.py      gives a user the operator role
   requirements.txt      Python libraries
 src/
   api.js                apiRequest(): every call to the back end goes through here (adds the token)
@@ -88,7 +100,7 @@ src/
   context/
     AuthContext.jsx     the logged-in user and token, shared by the whole site (useContext + localStorage)
   pages/                one file per page
-    Home.jsx, Login.jsx, Signup.jsx, Chat.jsx, NotFound.jsx
+    Home.jsx, Login.jsx, Signup.jsx, Chat.jsx, Operator.jsx, NotFound.jsx
   styles/               CSS files (App.css holds colours, layout and shared animations)
   utils/
     language.js         isArabic(): right-to-left messages
@@ -107,7 +119,9 @@ vite.config.js          Vite settings (base path for GitHub Pages, /api proxy)
 | GET | /api/auth/me | Yes | Returns the logged-in user |
 | POST | /api/chat | Yes | Saves the message, returns the answer; no answer → opens a ticket |
 | POST | /api/feedback | Yes | "Solved? Yes / No"; No → opens a ticket |
-| GET | /api/chat/history | Yes | The user's previous messages |
+| GET | /api/chat/history | Yes | The user's previous messages (with operator replies) |
+| GET | /api/tickets?status=open | Operator | Open or resolved tickets, with the customer and the message |
+| POST | /api/tickets/{id}/resolve | Operator | Saves the solution and sends it to the customer's chat |
 
 "Login needed" means the request carries the header `Authorization: Bearer <token>`.
 
@@ -125,7 +139,8 @@ vite.config.js          Vite settings (base path for GitHub Pages, /api proxy)
 2. `App.jsx` picks the page from the link. `/chat` opens only for a logged-in user; otherwise it goes to Log in.
 3. Log in and Sign up use `useState`, one `handleChange`, and `validate()` before sending anything. Then `AuthContext` calls the back end. After login, the token is kept in localStorage and sent with every request by `api.js`.
 4. The chat sends each message to `POST /api/chat`. The back end detects the language (Arabic letters → Arabic; numbers like 3, 7, 2 inside words or words like "ktir" → Arabizi; otherwise English), finds the problem with the most matching keywords, saves both messages, and answers in the same language. No match → a ticket is opened for an operator.
-5. Next steps: operator dashboard for tickets, and a trained machine-learning model in place of keyword matching (`find_answer` in `knowledge_base.py`).
+5. Operators open `/operator`, see the open tickets (customer, message, language, time), write a solution and press Resolve. The solution appears in the customer's chat as an operator message.
+6. Next step: a trained machine-learning model in place of keyword matching (`find_answer` in `knowledge_base.py`).
 
 ## Notes
 

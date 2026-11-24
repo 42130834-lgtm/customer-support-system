@@ -225,3 +225,18 @@
   direction: rtl;
   text-align: right;
 }
+
+/* jawab el operator (men el Operator page) */
+.page-chat .msg-operator {
+  align-self: flex-start;
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  border-bottom-left-radius: 5px;
+}
+.page-chat .msg-label {
+  display: block;
+  margin-bottom: 3px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #15803d;
+}

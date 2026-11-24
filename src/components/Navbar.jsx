@@ -41,6 +41,9 @@ export default function Navbar() {
           {user ? (
             <>
               <NavLink to="/chat" onClick={close}>Chat</NavLink>
+              {(user.role === 'operator' || user.role === 'admin') && (
+                <NavLink to="/operator" onClick={close}>Tickets</NavLink>
+              )}
               <span className="nav-user">Hi, {user.name}</span>
               <button type="button" className="logout-btn" onClick={handleLogout}>
                 Log out

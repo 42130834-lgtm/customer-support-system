@@ -51,6 +51,10 @@ class FeedbackIn(BaseModel):
     solved: bool
 
 
+class ResolveIn(BaseModel):
+    solution: str
+
+
 # ---------------- Min 3am yeke? ----------------
 def current_user(authorization: str = Header(default="")):
     """Kel route fiha Depends(current_user) lazem el user ykoun 3emel login."""
@@ -59,6 +63,13 @@ def current_user(authorization: str = Header(default="")):
     user = db.get_user_by_id(user_id) if user_id else None
     if not user:
         raise HTTPException(status_code=401, detail="Please log in again.")
+    return user
+
+
+def current_operator(user=Depends(current_user)):
+    """Bas el operator (aw el admin) fi yshuf el tickets."""
+    if user["role"] not in ("operator", "admin"):
+        raise HTTPException(status_code=403, detail="Operators only.")
     return user
 
 
@@ -137,3 +148,28 @@ def history(user=Depends(current_user)):
         {"id": m["id"], "from": m["sender"], "text": m["text"], "escalated": bool(m["escalated"])}
         for m in db.get_history(user["id"])
     ]
+
+
+# ---------------- Operator ----------------
+@app.get("/api/tickets")
+def tickets(status: str = "open", operator=Depends(current_operator)):
+    if status not in ("open", "resolved"):
+        raise HTTPException(status_code=400, detail="Status must be open or resolved.")
+    return {"counts": db.count_tickets(), "tickets": [dict(t) for t in db.list_tickets(status)]}
+
+
+@app.post("/api/tickets/{ticket_id}/resolve")
+def resolve(ticket_id: int, data: ResolveIn, operator=Depends(current_operator)):
+    ticket = db.get_ticket(ticket_id)
+    if not ticket:
+        raise HTTPException(status_code=404, detail="Ticket not found.")
+    if ticket["status"] == "resolved":
+        raise HTTPException(status_code=400, detail="This ticket is already resolved.")
+    solution = data.solution.strip()
+    if not solution:
+        raise HTTPException(status_code=400, detail="Please write the solution.")
+
+    db.resolve_ticket(ticket_id, solution)
+    # El jawab byetla3 lal customer bel chat taba3o
+    db.save_message(ticket["user_id"], "operator", solution, reply_to=ticket["message_id"])
+    return {"ok": True}
