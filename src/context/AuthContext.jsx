@@ -1,4 +1,4 @@
-import { createContext, useContext, useState } from 'react'
+import { createContext, useContext, useEffect, useState } from 'react'
 import { apiRequest } from '../api.js'
 
 // El user li 3emel login, moshtarak bayn kel el site.
@@ -18,6 +18,16 @@ function loadUser() {
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(loadUser())
+
+  // Iza 3melt login aw logout b tab tene bi nafs el browser, hal tab byet8ayyar kamen
+  // (kel el tabs byesta3mlo nafs el localStorage, ya3ne nafs el token)
+  useEffect(() => {
+    const onStorage = (e) => {
+      if (e.key === USER_KEY) setUser(loadUser())
+    }
+    window.addEventListener('storage', onStorage)
+    return () => window.removeEventListener('storage', onStorage)
+  }, [])
 
   // Btraje3 error message, aw '' iza kel shi mnih
   const signup = async (name, email, password) => {
